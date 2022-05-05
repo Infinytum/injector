@@ -100,6 +100,26 @@ func Call(fn interface{}) (err error) {
 	return
 }
 
+// CallT will attempt to resolve all arguments of the function and then call it and return the return value
+func CallT[T any](fn interface{}) (val T, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("dependency injection failed because factory paniced, recovered value: %v", r)
+		}
+	}()
+	args, err := injectFuncArgs(fn)
+	if err != nil {
+		return
+	}
+	resVal := reflect.ValueOf(fn).Call(args)
+	if len(resVal) > 0 {
+		if v, ok := resVal[0].Interface().(T); ok {
+			val = v
+		}
+	}
+	return
+}
+
 // MustCall will attempt to resolve all arguments of the function and then call it or panic
 func MustCall(fn interface{}) {
 	if err := Call(fn); err != nil {
