@@ -91,7 +91,12 @@ func Call(fn interface{}) (err error) {
 	if err != nil {
 		return
 	}
-	reflect.ValueOf(fn).Call(args)
+	resVal := reflect.ValueOf(fn).Call(args)
+	if len(resVal) > 0 {
+		if err, ok := resVal[0].Interface().(error); ok && err != nil {
+			return err
+		}
+	}
 	return
 }
 
