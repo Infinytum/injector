@@ -9,6 +9,9 @@ import (
 // If the dependency is unknown, ErrorDepFactoryNotFound is returned
 func Inject[T any](name ...string) (T, error) {
 	argType := reflect.TypeOf((*T)(nil)).Elem()
+	if err := activateDeferredFactories(argType, name...); err != nil {
+		return reflect.Zero(argType).Interface().(T), err
+	}
 	factory := depMap.GetOrDefault(reflectTypeKey(argType), nameOrDefault(name), nil)
 	if factory == nil {
 		return reflect.Zero(argType).Interface().(T), ErrorDepFactoryNotFound
@@ -29,6 +32,10 @@ func Inject[T any](name ...string) (T, error) {
 // InjectT tries to resolve a dependency by its type and optionally its name
 // If the dependency is unknown, ErrorDepFactoryNotFound is returned
 func InjectT(depType reflect.Type, name ...string) (interface{}, error) {
+	if err := activateDeferredFactories(depType, name...); err != nil {
+		return nil, err
+	}
+
 	factory := depMap.GetOrDefault(reflectTypeKey(depType), nameOrDefault(name), nil)
 	if factory == nil {
 		return nil, ErrorDepFactoryNotFound
@@ -43,6 +50,11 @@ func InjectInto(out interface{}, name ...string) error {
 	if argType.Kind() != reflect.Pointer {
 		return ErrorDepNotAPointer
 	}
+
+	if err := activateDeferredFactories(argType, name...); err != nil {
+		return err
+	}
+
 	factory := depMap.GetOrDefault(reflectTypeKey(argType.Elem()), nameOrDefault(name), nil)
 	if factory == nil {
 		return ErrorDepFactoryNotFound
